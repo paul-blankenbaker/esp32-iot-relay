@@ -1,0 +1,99 @@
+menu "Garage Door Configuration"
+
+config RELAY_GPIO
+    int "Relay GPIO number"
+	range 0 34
+	default 33
+	help
+		GPIO number (IOxx) connected to Relay.
+
+		Some GPIOs are used for other purposes (flash
+		connections, etc.) and cannot be used as outputs to
+		control the relay connected to your garage door.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+
+config MDNS_NAME
+    string "Name of host on network (mDNS/avahi)"
+	default "garage"
+	help
+		The mDNS (avahi) name the server can be found at
+
+		This is the name that you should be able to find the
+		server at on your network. For example, if you set
+		this to "garage", you should then be able to connect
+		to: "https://garage.local/" if things are working
+		correctly.
+
+config MDNS_INSTANCE
+    string "Description of host on network (mDNS)"
+	default "ESP32 with relay for garage"
+	help
+		The mDNS (avahi) descriptive name of the server
+
+		This is the descriptive name associated with the
+		server. This is useful when scanning the network and
+		trying to figure out what a device is for.
+
+config AP_SSID
+    string "SSID for AP Mode"
+	default "esp32"
+	help
+		The WPA2 SSID for AP mode
+
+		The SSID that will be visible and accept connections
+		from WIFI clients.
+
+config AP_PASSWORD
+    string "Password for AP Mode"
+	default "letMeInJoe"
+	help
+		The WPA2 password for AP mode
+
+		The password that will be required for clients to
+		connect to the ESP32 acting as an access point.
+
+config STA_SSID
+    string "SSID of STA"
+	default "home-wifi"
+	help
+		The SSID of home WIFI router
+
+		The SSID that the ESP32 will connect to (your home
+		WIFI router).
+
+config STA_PASSWORD
+    string "Password for STA mode"
+	default "letMeInJoe"
+	help
+		The WPA2 password how WIFI router
+
+		The password required to connect to your home WIFI
+		router.
+
+config ENABLE_HTTPS
+    int "Enable HTTPS"
+    range 0 1
+    default 0
+    help
+		Set to 1 to enable HTTPS or 0 for HTTP
+
+		If you enable HTTPS, expect long initial delays
+		when sessions are initially started. Also, note
+		that a password will be required to open the
+		garage door.    
+
+config OPEN_PASSWORD
+    string "Password on form to open door"
+	default "abc123"
+	help
+		The password required in the HTML form to open door
+
+		The user will need to enter this password in the web
+		page before opening the door. All passwords starting
+		with this sequence will be accepted. If you set it to
+		the empty string, no password will be required. NOTE:
+		This is only used if ENABLE_HTTPS is set to 1.
+
+endmenu
