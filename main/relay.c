@@ -266,7 +266,7 @@ static void openssl_task(void *ignored) {
   SSL_CTX *ctx;
   SSL *ssl;
 
-  int socket, new_socket;
+  int sock, new_socket;
   socklen_t addr_len;
   struct sockaddr_in sock_addr;
 
@@ -309,8 +309,8 @@ static void openssl_task(void *ignored) {
   ESP_LOGD(TAG, "OK");
 
   ESP_LOGI(TAG, "SSL server create socket ......");
-  socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (socket < 0) {
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
     ESP_LOGE(TAG, "failed");
     goto failed2;
   }
@@ -321,7 +321,7 @@ static void openssl_task(void *ignored) {
   sock_addr.sin_family = AF_INET;
   sock_addr.sin_addr.s_addr = 0;
   sock_addr.sin_port = htons(OPENSSL_LOCAL_TCP_PORT);
-  ret = bind(socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
+  ret = bind(sock, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
   if (ret) {
     ESP_LOGE(TAG, "failed");
     goto failed3;
@@ -329,7 +329,7 @@ static void openssl_task(void *ignored) {
   ESP_LOGD(TAG, "OK");
 
   ESP_LOGI(TAG, "SSL server socket listen ......");
-  ret = listen(socket, 32);
+  ret = listen(sock, 32);
   if (ret) {
     ESP_LOGE(TAG, "failed");
     goto failed3;
@@ -346,7 +346,7 @@ static void openssl_task(void *ignored) {
   ESP_LOGD(TAG, "OK");
 
   ESP_LOGI(TAG, "SSL server socket accept client ......");
-  new_socket = accept(socket, (struct sockaddr *)&sock_addr, &addr_len);
+  new_socket = accept(sock, (struct sockaddr *)&sock_addr, &addr_len);
   if (new_socket < 0) {
     ESP_LOGE(TAG, "failed" );
     goto failed4;
@@ -400,8 +400,8 @@ static void openssl_task(void *ignored) {
   ssl = NULL;
   goto reconnect;
  failed3:
-  close(socket);
-  socket = -1;
+  close(sock);
+  sock = -1;
  failed2:
   SSL_CTX_free(ctx);
   ctx = NULL;
@@ -493,15 +493,15 @@ static int write_html(int fd, const char* html) {
  */
 static void http_task(void *ignored) {
   int ret;
-  int socket, new_socket;
+  int sock, new_socket;
   socklen_t addr_len;
   struct sockaddr_in sock_addr;
 
   char recv_buf[HTTP_RECV_BUF_LEN];
 
   ESP_LOGI(TAG, "HTTP server create socket ......");
-  socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (socket < 0) {
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
     ESP_LOGE(TAG, "failed");
     goto failed2;
   }
@@ -512,7 +512,7 @@ static void http_task(void *ignored) {
   sock_addr.sin_family = AF_INET;
   sock_addr.sin_addr.s_addr = 0;
   sock_addr.sin_port = htons(HTTP_LOCAL_TCP_PORT);
-  ret = bind(socket, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
+  ret = bind(sock, (struct sockaddr*)&sock_addr, sizeof(sock_addr));
   if (ret) {
     ESP_LOGE(TAG, "failed");
     goto failed3;
@@ -520,7 +520,7 @@ static void http_task(void *ignored) {
   ESP_LOGD(TAG, "OK");
 
   ESP_LOGI(TAG, "HTTP server socket listen ......");
-  ret = listen(socket, 32);
+  ret = listen(sock, 32);
   if (ret) {
     ESP_LOGE(TAG, "failed");
     goto failed3;
@@ -529,7 +529,7 @@ static void http_task(void *ignored) {
 
  reconnect:
   ESP_LOGI(TAG, "HTTP server socket accept client ......");
-  new_socket = accept(socket, (struct sockaddr *)&sock_addr, &addr_len);
+  new_socket = accept(sock, (struct sockaddr *)&sock_addr, &addr_len);
   if (new_socket < 0) {
     ESP_LOGE(TAG, "failed" );
     goto failed4;
@@ -566,8 +566,8 @@ static void http_task(void *ignored) {
  failed4:
   goto reconnect;
  failed3:
-  close(socket);
-  socket = -1;
+  close(sock);
+  sock = -1;
  failed2:
   vTaskDelete(NULL);
   return ;
