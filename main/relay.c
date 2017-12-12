@@ -588,6 +588,7 @@ static void http_server_init(void) {
     return;
   }
 
+  ESP_LOGI(TAG, "Starting HTTP server...");
   ret = xTaskCreate(http_task,
 		    HTTP_TASK_NAME,
 		    HTTP_TASK_STACK_WORDS,
@@ -618,13 +619,13 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     break;
 
   case SYSTEM_EVENT_STA_GOT_IP:
+    ESP_LOGI(TAG, "sta connected to %s", STA_SSID);
     xEventGroupClearBits(wifi_event_group, DISCONNECTED_BIT);
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
 #if ENABLE_HTTPS    
     ESP_LOGI(TAG, "Starting HTTPS server...");
     openssl_server_init();
 #else
-    ESP_LOGI(TAG, "Starting HTTP server...");
     http_server_init();
 #endif
     break;
@@ -652,6 +653,9 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     // Start up DHCP server on access point
     // Not required, dhcp server is started automatically in AP mode
     // ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(ESP_IF_WIFI_AP));
+
+    // Start up HTTP server
+    http_server_init();
     break;
   }
 
