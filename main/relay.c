@@ -113,6 +113,8 @@ const int CONNECTED_BIT = BIT0;
 const int DISCONNECTED_BIT = BIT1;
 static bool reconnect = true;
 
+static int triggerCnt = 0;
+
 // Used to configure mDNS (avahi)
 #define MDNS_NAME CONFIG_MDNS_NAME
 #define MDNS_INSTANCE CONFIG_MDNS_INSTANCE
@@ -121,6 +123,10 @@ static bool reconnect = true;
 #define HTTP_HEADER \
   "HTTP/1.1 200 OK\r\n" \
   "Content-Type: text/html\r\n" \
+  "Cache-Control: no-cache, must-revalidate\r\n" \
+  "Date: Mon, 22 Jan 2018 19:54:21 GMT\r\n" \
+  "Expires: Mon, 22 Jan 2018 19:54:21 GMT\r\n" \
+  "Last-Modified: Mon, 22 Jan 2018 19:54:21 GMT\r\n" \
   "Content-Length: %d\r\n\r\n"
 
 // The HTML document user interacts with
@@ -155,6 +161,7 @@ const char* HTML_MAIN = \
   "<input type=\"hidden\" name=\"action\" id=\"action\" value=\"open\"/>\r\n" \
   "<input type=\"submit\" value=\"Garage Door\" id=\"action\" style=\"display:block; font-size: 24pt; text-align: center; padding: 1em; width: 10em; margin-left:auto; margin-right: auto;\"/>\r\n" \
   "</div>\r\n" \
+  "<div style=\"display:block; font-size: 10pt; text-align: center; padding: 1em;\">Triggered: %d</div>\r\n" \
   "</form>\r\n" \
   "</body>\r\n" \
   "</html>\r\n";
@@ -536,22 +543,40 @@ static void http_task(void *ignored) {
   }
   ESP_LOGD(TAG, "OK");
 
-  ESP_LOGI(TAG, "HTTP server read message ......");
+  struct timeval timeout;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = 100000;
+  ret = setsockopt(new_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
-  memset(recv_buf, 0, HTTP_RECV_BUF_LEN);
-  ret = read(new_socket, recv_buf, HTTP_RECV_BUF_LEN - 1);
-  if (ret <= 0) {
-    goto failed5;
+  if (ret != -1) {
+    ESP_LOGI(TAG, "HTTP server read message ......");
+    ret = read(new_socket, recv_buf, HTTP_RECV_BUF_LEN - 1);
+  } else {
+    ESP_LOGI(TAG, "HTTP server failed to set receive timeout on socket ......");
   }
-  ESP_LOGD(TAG, "HTTP read:\n%s\n", recv_buf);
-  if (strstr(recv_buf, "POST ") &&
-      strstr(recv_buf, " HTTP/1.1") &&
-      strstr(recv_buf, "action=open")) {
 
-    ESP_LOGI(TAG, "Triggering garage door");
-    xTaskCreate(&open_door_task, "open_door_task", configMINIMAL_STACK_SIZE, (void*) RELAY_GPIO, 5, NULL);
+  // Read packets looking for key phrase indicating that they want the door opened
+  while (ret > 0) {
+    ESP_LOGI(TAG, "Received %d bytes from client\n", ret);
+    // Null terminate string prior to search
+    recv_buf[ret] = 0;
+    ESP_LOGD(TAG, "HTTP read:\n%s\n", recv_buf);
+    if (strstr(recv_buf, "action=open")) {
+      ESP_LOGI(TAG, "Triggering garage door");
+      xTaskCreate(&open_door_task, "open_door_task", configMINIMAL_STACK_SIZE, (void*) RELAY_GPIO, 5, NULL);
+      triggerCnt++;
+      break;
+    }
+
+    // Keep reading until no more data
+    ret = read(new_socket, recv_buf, HTTP_RECV_BUF_LEN - 1);
   }
-  ret = write_html(new_socket, HTML_MAIN);
+
+  int outLen = strlen(HTML_MAIN) + 100;
+  char* out = (char*) malloc(outLen);
+  snprintf(out, outLen, HTML_MAIN, triggerCnt); 
+  ret = write_html(new_socket, out);
+  free(out);
 	
   if (ret <= 0) {
     ESP_LOGE(TAG, "Failed to send HTML document to client");
